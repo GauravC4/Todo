@@ -73,6 +73,10 @@ form button:hover {
   border-radius: 5px;
   transition: all 0.5s ease;
 }
+.todo:hover {
+  box-shadow: 5px 10px 10px rgba(82, 79, 79, 0.5);
+  transform: translateX(-8px) translateY(-8px);
+}
 .todo span {
   display: inline-block;
   max-width: 25rem;
