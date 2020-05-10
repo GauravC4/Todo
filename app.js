@@ -6,9 +6,14 @@ const filter = document.querySelector(".filter-todos");
 
 //event listeners
 todoButton.addEventListener("click", addTodo);
-todoList.addEventListener("click", checkDelete);
+todoList.addEventListener("click", impCheckDelete);
+todoList.addEventListener("dblclick", increasePriority);
 filter.addEventListener("click", filterTodo);
 window.addEventListener("DOMContentLoaded", LocalStore.renderLocalTodos);
+
+//globals
+let clickRef = null;
+let preventClick = false;
 
 //functions
 function addTodo($event) {
@@ -18,7 +23,8 @@ function addTodo($event) {
     LocalStore.persist(LocalStore.ADD, todoInput.value);
     addTodoToDom(todoInput.value);
   } else {
-    setComplete(todoInput.value);
+    // if item already exists , set incomplete if complete
+    uncomplete(todoInput.value);
   }
   todoInput.value = "";
 }
@@ -37,6 +43,10 @@ function addTodoToDom(value, checked = false) {
   const todoAction = document.createElement("div");
   todoAction.classList.add("todo-action");
 
+  const todoImp = document.createElement("button");
+  todoImp.innerHTML = '<i class="fas fa-chevron-up"></i>';
+  todoImp.classList.add("todo-imp");
+
   const todoCheck = document.createElement("button");
   todoCheck.innerHTML = '<i class="fas fa-check"></i>';
   todoCheck.classList.add("todo-check");
@@ -45,6 +55,7 @@ function addTodoToDom(value, checked = false) {
   todoDel.innerHTML = '<i class="fas fa-trash"></i>';
   todoDel.classList.add("todo-del");
 
+  todoAction.appendChild(todoImp);
   todoAction.appendChild(todoCheck);
   todoAction.append(todoDel);
 
@@ -56,9 +67,11 @@ function addTodoToDom(value, checked = false) {
   todoList.appendChild(newTodo);
 }
 
-function checkDelete($event) {
+function impCheckDelete($event) {
   const item = $event.target;
-  if (item.classList[0] == "todo-del") {
+  if (item.classList[0] == "todo-imp") {
+    increasePriority($event);
+  } else if (item.classList[0] == "todo-del") {
     const target = item.closest("li");
     target.classList.add("fall");
     // del from local storage
@@ -77,6 +90,62 @@ function checkDelete($event) {
       item.closest(".todo").firstChild.innerText
     );
   }
+}
+
+function increasePriority($event) {
+  if (preventClick) return;
+  if ($event.type == "click") {
+    // if already clicked within 300ms cancel prev click
+    if (clickRef != null) clearTimeout(clickRef);
+    clickRef = setTimeout(() => {
+      //perform action if no repeated click within 300ms
+      shiftUp($event, "single");
+    }, 300);
+  } else if ($event.type == "dblclick") {
+    // if already clicked within 300ms cancel prev click
+    if (clickRef != null) clearTimeout(clickRef);
+    preventClick = true;
+    shiftUp($event, "double");
+    // allow click after 300ms
+    setTimeout(() => {
+      preventClick = false;
+    }, 300);
+  }
+}
+
+function shiftUp($event, click = "single") {
+  let currNode = $event.target.closest("li");
+  let parentNode = currNode.parentNode;
+
+  if (click == "double") {
+    var targetNode = currNode.parentNode.firstChild;
+  } else {
+    var targetNode = currNode.previousSibling;
+  }
+
+  // animation for shifting node up
+  if (click == "double") {
+    parentNode.classList.add("vanish");
+  } else {
+    if (targetNode) targetNode.firstChild.classList.add("vanish");
+    currNode.firstChild.classList.add("vanish");
+  }
+  setTimeout(() => {
+    // dom opertion happens on this line
+    parentNode.insertBefore(currNode, targetNode);
+
+    if (targetNode) targetNode.firstChild.classList.remove("vanish");
+    currNode.firstChild.classList.remove("vanish");
+    parentNode.classList.remove("vanish");
+  }, 500);
+
+  //save to local storage
+  LocalStore.persist(LocalStore.PRIORITY, [
+    currNode.firstChild.firstChild.innerText,
+    targetNode != null
+      ? targetNode.firstChild.firstChild.innerText
+      : targetNode,
+  ]);
 }
 
 function filterTodo($event) {
@@ -101,7 +170,8 @@ function filterTodo($event) {
   });
 }
 
-function setComplete(value) {
+// if a list item is complete , set as incomplete
+function uncomplete(value) {
   todoList.childNodes.forEach(function (todo) {
     todo = todo.firstChild;
     let todoVal = todo.firstChild.innerText;

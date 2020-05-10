@@ -2,6 +2,7 @@ var LocalStore = (function IFFE() {
   const ADD = "ADD";
   const REMOVE = "REMOVE";
   const COMPLETE = "COMPLETE";
+  const PRIORITY = "PRIORITY";
   const LSkey = "Todos";
 
   function persist(action, value) {
@@ -11,6 +12,8 @@ var LocalStore = (function IFFE() {
       _removeFromLocalTodos(value);
     } else if (action == COMPLETE) {
       _toggleCompleteInLocalTodos(value);
+    } else if (action == PRIORITY) {
+      _prioritizeInLocalTodos(value[0], value[1]);
     }
   }
 
@@ -49,6 +52,16 @@ var LocalStore = (function IFFE() {
     _saveToLocalStorage(todos);
   }
 
+  function _prioritizeInLocalTodos(curr, target) {
+    if (!target) return;
+    let todos = _getLocalTodos();
+    currIdx = _findTodo(todos, curr);
+    targetIdx = _findTodo(todos, target);
+    let toInsert = todos.splice(currIdx, 1)[0];
+    todos.splice(targetIdx, 0, toInsert);
+    _saveToLocalStorage(todos);
+  }
+
   function _findTodo(todos, todo) {
     for (let i = 0; i < todos.length; i++) {
       if (todos[i].value == todo) return i;
@@ -65,6 +78,7 @@ var LocalStore = (function IFFE() {
     ADD: ADD,
     REMOVE: REMOVE,
     COMPLETE: COMPLETE,
+    PRIORITY: PRIORITY,
     persist: persist,
     exists: exists,
     renderLocalTodos: renderLocalTodos,
